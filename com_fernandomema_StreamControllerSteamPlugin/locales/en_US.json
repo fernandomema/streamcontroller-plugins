@@ -1,0 +1,14 @@
+{
+    "plugin.name": "Steam Friends",
+    "steamfriends.no_friends": "No friends found or something went wrong 😢",
+    "steamfriends.friend_status": "Status",
+    "steamfriends.friend_game": "Playing",
+    "steamfriends.friend_offline": "Offline",
+    "steamfriends.friend_online": "Online",
+    "steamfriends.friend_away": "Away",
+    "steamfriends.friend_busy": "Busy",
+    "steamfriends.friend_snooze": "Snooze",
+    "steamfriends.friend_looking_to_trade": "Looking to trade",
+    "steamfriends.friend_looking_to_play": "Looking to play",
+    "steamfriends.friend_avatar": "Show Steam Avatar"
+}

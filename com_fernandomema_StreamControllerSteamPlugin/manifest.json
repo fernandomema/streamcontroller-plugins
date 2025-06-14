@@ -1,0 +1,19 @@
+{
+    "version": "1.0.0",
+    "thumbnail": "store/Thumbnail.png",
+    "id": "com_fernandomema_SteamFriends",
+    "name": "Steam Friends",
+    "descriptions": {
+        "en_US": "Display your Steam friends, their status, and current game."
+    },
+    "short-descriptions": {
+        "en_US": "Show Steam friends and their status."
+    },
+    "tags": ["Steam", "Friends", "Games"],
+    "minimum-app-version": "1.0.0",
+    "app-version": "1.4.11-beta",
+
+    
+    "description": "Display your Steam friends, their status, and current game.",
+    "short-description": "Show Steam friends and their status."
+}

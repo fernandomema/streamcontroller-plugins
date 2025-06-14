@@ -1,0 +1,16 @@
+{
+    "generic": {
+        "copyright": "Core447",
+        "original-url": "",
+        "license": "GPL-3.0",
+        "license-url": "https://www.gnu.org/licenses/gpl-3.0.txt",
+        "description": "",
+        "license-description": "Icons from Google Material Icons"
+    },
+    "credits": [
+        {
+            "name": "Steam Web API",
+            "url": "https://steamcommunity.com/dev/apikey"
+        }
+    ]
+}
