@@ -14,14 +14,20 @@ class GameLauncher(ActionBase):
             self.settings = {}
 
     def _slot_coords(self):
-        """Return x, y and page index when available."""
+        """Try to obtain the key coordinates and page index."""
         x = getattr(self, "x", None)
         y = getattr(self, "y", None)
         page = getattr(self, "page", getattr(self, "page_index", None))
 
-        # If a Page object is provided, try to extract its index
-        if page is not None and not isinstance(page, int):
-            page = getattr(page, "page_index", getattr(page, "index", 0))
+        # Some environments expose the key id as "1x0"
+        if (x is None or y is None) and hasattr(self, "key"):
+            try:
+                parts = str(getattr(self, "key")).split("x")
+                if len(parts) == 2:
+                    x = int(parts[0])
+                    y = int(parts[1])
+            except Exception:
+                pass
 
         ident = getattr(self, "input_ident", None)
         if (x is None or y is None) and ident is not None:
@@ -38,17 +44,8 @@ class GameLauncher(ActionBase):
         if (x is None or y is None) and hasattr(self, "settings"):
             x = self.settings.get("_x", x)
             y = self.settings.get("_y", y)
-            if page is None:
-                page = self.settings.get("_page_index", page)
-
-        if (x is None or y is None) and hasattr(self, "key"):
-            try:
-                parts = str(getattr(self, "key")).split("x")
-                if len(parts) == 2:
-                    x = int(parts[0])
-                    y = int(parts[1])
-            except Exception:
-                pass
+        if page is None and hasattr(self, "settings"):
+            page = self.settings.get("_page_index", page)
 
         if page is None:
             page = 0
