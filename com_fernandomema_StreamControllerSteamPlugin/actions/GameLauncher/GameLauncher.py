@@ -3,25 +3,94 @@ import subprocess
 
 
 class GameLauncher(ActionBase):
-    """Action that launches a Steam game using the configured appid."""
+    """Action that launches a Steam game using the configured appid.
+
+    If no game is configured it will try to automatically assign one based on
+    the key position within the Steam games page."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not hasattr(self, "settings") or self.settings is None:
             self.settings = {}
 
+    def _slot_coords(self):
+        """Try to obtain the key coordinates and page index."""
+        x = getattr(self, "x", None)
+        y = getattr(self, "y", None)
+        page = getattr(self, "page", getattr(self, "page_index", None))
+
+        # Some environments expose the key id as "1x0"
+        if (x is None or y is None) and hasattr(self, "key"):
+            try:
+                parts = str(getattr(self, "key")).split("x")
+                if len(parts) == 2:
+                    x = int(parts[0])
+                    y = int(parts[1])
+            except Exception:
+                pass
+
+        ident = getattr(self, "input_ident", None)
+        if (x is None or y is None) and ident is not None:
+            coords = getattr(ident, "coords", None)
+            if coords:
+                try:
+                    x = int(coords[0])
+                    y = int(coords[1])
+                except Exception:
+                    pass
+            if page is None:
+                page = getattr(ident, "page_index", page)
+
+        if (x is None or y is None) and hasattr(self, "settings"):
+            x = self.settings.get("_x", x)
+            y = self.settings.get("_y", y)
+        if page is None and hasattr(self, "settings"):
+            page = self.settings.get("_page_index", page)
+
+        if page is None:
+            page = 0
+
+        return x, y, page
+
+    def _get_default_game(self, games):
+        """Return the game assigned to this position if possible."""
+        x, y, page = self._slot_coords()
+        if x is None or y is None:
+            return None
+        if x == 0:
+            return None
+        cols = 4
+        index = (page * cols * 3) + ((y * cols) + (x - 1))
+        if 0 <= index < len(games):
+            return games[index]
+        return None
+
+    def _ensure_settings(self):
+        if not hasattr(self.plugin_base, "get_installed_games"):
+            return
+        if self.settings.get("appid"):
+            return
+        try:
+            games = self.plugin_base.get_installed_games()
+        except Exception:
+            games = []
+        game = self._get_default_game(games)
+        if not game:
+            return
+        x, y, page = self._slot_coords()
+        self.settings["appid"] = game.get("appid")
+        self.settings["name"] = game.get("name")
+        if x is not None:
+            self.settings.setdefault("_x", x)
+        if y is not None:
+            self.settings.setdefault("_y", y)
+        if page is not None:
+            self.settings.setdefault("_page_index", page)
+        self.set_settings(self.settings)
+
     def load_config_defaults(self):
         """Ensure settings have a valid appid/name when possible."""
-        games = []
-        if hasattr(self.plugin_base, "get_installed_games"):
-            try:
-                games = self.plugin_base.get_installed_games()
-            except Exception:
-                games = []
-        if "appid" not in self.settings and games:
-            self.settings["appid"] = games[0].get("appid")
-            self.settings["name"] = games[0].get("name")
-            self.set_settings(self.settings)
+        self._ensure_settings()
 
     def get_config_rows(self):
         """Create configuration rows to choose the game."""
@@ -73,6 +142,7 @@ class GameLauncher(ActionBase):
 
     def on_key_down(self, *_args, **_kwargs):
         """Launch the Steam game when the key is pressed."""
+        self._ensure_settings()
         appid = self.settings.get("appid") if hasattr(self, "settings") else None
         if not appid:
             return
@@ -83,6 +153,7 @@ class GameLauncher(ActionBase):
 
     def on_tick(self):
         """Display the game name on the key label."""
+        self._ensure_settings()
         name = self.settings.get("name") if hasattr(self, "settings") else None
         if name:
             self.set_label(text=name, position="center")
