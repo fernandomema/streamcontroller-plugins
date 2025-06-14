@@ -19,6 +19,18 @@ class GameLauncher(ActionBase):
         y = getattr(self, "y", None)
         page = getattr(self, "page", getattr(self, "page_index", None))
 
+        ident = getattr(self, "input_ident", None)
+        if (x is None or y is None) and ident is not None:
+            coords = getattr(ident, "coords", None)
+            if coords:
+                try:
+                    x = int(coords[0])
+                    y = int(coords[1])
+                except Exception:
+                    pass
+            if page is None:
+                page = getattr(ident, "page_index", page)
+
         if (x is None or y is None) and hasattr(self, "settings"):
             x = self.settings.get("_x", x)
             y = self.settings.get("_y", y)
@@ -64,8 +76,15 @@ class GameLauncher(ActionBase):
         game = self._get_default_game(games)
         if not game:
             return
+        x, y, page = self._slot_coords()
         self.settings["appid"] = game.get("appid")
         self.settings["name"] = game.get("name")
+        if x is not None:
+            self.settings.setdefault("_x", x)
+        if y is not None:
+            self.settings.setdefault("_y", y)
+        if page is not None:
+            self.settings.setdefault("_page_index", page)
         self.set_settings(self.settings)
 
     def load_config_defaults(self):
