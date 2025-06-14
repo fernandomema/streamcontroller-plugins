@@ -10,6 +10,9 @@ from src.backend.DeckManagement.InputIdentifier import Input
 import requests
 import logging
 import math
+import os
+import json
+import re
 
 
 class SteamFriendsPlugin(PluginBase):
@@ -155,10 +158,54 @@ class SteamFriendsPlugin(PluginBase):
 
         for page_idx in range(total_pages):
             keys = {}
+
+            # Botón de página anterior
+            if page_idx > 0:
+                keys["0x0"] = {
+                    "states": {
+                        "0": {
+                            "actions": [
+                                {
+                                    "id": "com_core447_DeckPlugin::ChangePage",
+                                    "settings": {
+                                        "selected_page": os.path.join(self.PATH, "pages", f"SteamGames{page_idx}.json"),
+                                        "deck_number": None
+                                    },
+                                }
+                            ],
+                            "image-control-action": 0,
+                            "label-control-actions": [0, 0, 0],
+                            "background-control-action": 0,
+                        }
+                    }
+                }
+
+            # Botón de página siguiente
+            if page_idx < total_pages - 1:
+                next_page_path = os.path.join(self.PATH, "pages", f"SteamGames{page_idx + 2}.json")
+                keys["1x0"] = {  # Cambiar posición a 1x0
+                    "states": {
+                        "0": {
+                            "actions": [
+                                {
+                                    "id": "com_core447_DeckPlugin::ChangePage",
+                                    "settings": {
+                                        "selected_page": next_page_path,
+                                        "deck_number": None
+                                    },
+                                }
+                            ],
+                            "image-control-action": 0,
+                            "label-control-actions": [0, 0, 0],
+                            "background-control-action": 0,
+                        }
+                    }
+                }
+
             chunk = games[page_idx * per_page:(page_idx + 1) * per_page]
             for idx, game in enumerate(chunk):
-                x = idx % max_cols
-                y = idx // max_cols
+                x = (idx + 2) % max_cols  # Ajustar posición para dejar espacio a los botones
+                y = (idx + 2) // max_cols
                 key = f"{x}x{y}"
                 # log app_id and name
                 self.logger.warning(f"Game {idx + 1}: appid={game['appid']}, name={game['name']}")
