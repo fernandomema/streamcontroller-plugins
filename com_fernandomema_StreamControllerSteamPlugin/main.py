@@ -155,7 +155,7 @@ class SteamFriendsPlugin(PluginBase):
                     "0": {
                         "actions": [
                             {
-                                "id": f"{self.ID}::GameLauncher",
+                                "id": f"{self.plugin_id}::GameLauncher",
                                 "settings": {"appid": game["appid"], "name": game["name"]},
                             }
                         ],
