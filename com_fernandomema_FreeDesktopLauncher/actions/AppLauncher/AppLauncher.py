@@ -1,5 +1,6 @@
 from src.backend.PluginManager.ActionBase import ActionBase
 import subprocess
+import shlex
 from PIL import Image
 from gi.repository import Gtk, Gdk
 import os
@@ -11,10 +12,28 @@ class AppLauncher(ActionBase):
             self.settings = {}
 
     def on_short_press(self):
+        # Call on_key_down for backward compatibility with older app versions
+        self.on_key_down()
+
+    def on_key_down(self, *_args, **_kwargs):
         settings = self.settings if hasattr(self, "settings") and self.settings else {}
         cmd = settings.get("exec")
         if cmd:
+            self.launch_command(cmd)
+
+    def launch_command(self, cmd):
+        cmd = self.sanitize_exec(cmd)
+        try:
             subprocess.Popen(cmd, shell=True)
+        except Exception as e:
+            print(f"[AppLauncher] Failed to launch '{cmd}': {e}")
+
+    def sanitize_exec(self, cmd):
+        # Remove desktop entry field codes like %f, %F, %u, etc.
+        tokens = ["%f", "%F", "%u", "%U", "%i", "%c", "%k"]
+        for token in tokens:
+            cmd = cmd.replace(token, "")
+        return cmd.strip()
 
     def on_tick(self):
         settings = self.settings if hasattr(self, "settings") and self.settings else {}
@@ -35,12 +54,23 @@ class AppLauncher(ActionBase):
         # Try absolute path first
         if os.path.isabs(icon_name) and os.path.exists(icon_name):
             return icon_name
-        theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
-        info = theme.lookup_icon(icon_name, 64, 0)
-        if info:
-            return info.get_filename()
-        # fallback to pixmaps
-        pixmap_path = f"/usr/share/pixmaps/{icon_name}.png"
-        if os.path.exists(pixmap_path):
-            return pixmap_path
+        if os.path.exists(icon_name):
+            return icon_name
+        try:
+            theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+            info = theme.lookup_icon(icon_name, 64, 0)
+            if info:
+                return info.get_filename()
+        except Exception:
+            pass
+        # fallback paths
+        search_paths = [
+            f"/usr/share/pixmaps/{icon_name}.png",
+            f"/usr/share/icons/hicolor/64x64/apps/{icon_name}.png",
+            f"/usr/share/icons/hicolor/48x48/apps/{icon_name}.png",
+            f"/usr/share/icons/hicolor/256x256/apps/{icon_name}.png",
+        ]
+        for p in search_paths:
+            if os.path.exists(p):
+                return p
         return None
