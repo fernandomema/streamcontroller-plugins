@@ -29,8 +29,10 @@ class SteamFriendsPlugin(PluginBase):
         # Valores por defecto
         self.settings.setdefault('api_key', "")
         self.settings.setdefault('steam_id', "")
+        self.settings.setdefault('sgdb_api_key', "")
         self.api_key = self.settings['api_key']
         self.steam_id = self.settings['steam_id']
+        self.sgdb_api_key = self.settings['sgdb_api_key']
 
         # Caches
         self._avatar_url = None
@@ -100,8 +102,9 @@ class SteamFriendsPlugin(PluginBase):
         """Guarda los settings y actualiza api_key y steam_id en memoria"""
         super().set_settings(settings)
         self.settings = settings
-        self.api_key = self.settings.get('api_key', "E91DBC4C9CA96527F844933EEEB03EF1")
-        self.steam_id = self.settings.get('steam_id', "76561198074254458")
+        self.api_key = self.settings.get('api_key', "")
+        self.steam_id = self.settings.get('steam_id', "")
+        self.sgdb_api_key = self.settings.get('sgdb_api_key', "")
 
     def get_settings_area(self):
         """Devuelve la UI de configuración del plugin (API Key y SteamID)"""
@@ -113,6 +116,8 @@ class SteamFriendsPlugin(PluginBase):
         api_key_row.set_text(self.settings.get('api_key', ""))
         steam_id_row = EntryRow(title="SteamID64 principal")
         steam_id_row.set_text(self.settings.get('steam_id', ""))
+        sgdb_api_key_row = EntryRow(title="SteamGridDB API Key")
+        sgdb_api_key_row.set_text(self.settings.get('sgdb_api_key', ""))
 
         def on_api_key_changed(row, _param):
             self.set_setting('api_key', row.get_text())
@@ -120,11 +125,16 @@ class SteamFriendsPlugin(PluginBase):
         def on_steam_id_changed(row, _param):
             self.set_setting('steam_id', row.get_text())
 
+        def on_sgdb_api_key_changed(row, _param):
+            self.set_setting('sgdb_api_key', row.get_text())
+
         api_key_row.connect("notify::text", on_api_key_changed)
         steam_id_row.connect("notify::text", on_steam_id_changed)
+        sgdb_api_key_row.connect("notify::text", on_sgdb_api_key_changed)
 
         group.add(api_key_row)
         group.add(steam_id_row)
+        group.add(sgdb_api_key_row)
         return group
 
     def set_setting(self, key, value):
@@ -349,7 +359,7 @@ class SteamFriendsPlugin(PluginBase):
         import requests
         from pathlib import Path
 
-        SGDB_API_KEY = "6d9fa654dac9d39265f691464d8414e5"
+        SGDB_API_KEY = self.settings.get("sgdb_api_key", "")
 
         # Carpeta para los iconos
         assets_dir = Path(__file__).parent / "assets"
