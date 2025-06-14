@@ -14,10 +14,17 @@ class GameLauncher(ActionBase):
             self.settings = {}
 
     def _slot_coords(self):
-        """Return x, y and page index if available."""
+        """Return x, y and page index when available."""
         x = getattr(self, "x", None)
         y = getattr(self, "y", None)
-        page = getattr(self, "page", getattr(self, "page_index", 0))
+        page = getattr(self, "page", getattr(self, "page_index", None))
+
+        if (x is None or y is None) and hasattr(self, "settings"):
+            x = self.settings.get("_x", x)
+            y = self.settings.get("_y", y)
+            if page is None:
+                page = self.settings.get("_page_index", page)
+
         if (x is None or y is None) and hasattr(self, "key"):
             try:
                 parts = str(getattr(self, "key")).split("x")
@@ -26,6 +33,10 @@ class GameLauncher(ActionBase):
                     y = int(parts[1])
             except Exception:
                 pass
+
+        if page is None:
+            page = 0
+
         return x, y, page
 
     def _get_default_game(self, games):

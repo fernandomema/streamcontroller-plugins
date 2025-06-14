@@ -166,7 +166,13 @@ class SteamFriendsPlugin(PluginBase):
                             "actions": [
                                 {
                                     "id": f"{self.plugin_id}::GameLauncher",
-                                    "settings": {"appid": game["appid"], "name": game["name"]},
+                                    "settings": {
+                                        "appid": game["appid"],
+                                        "name": game["name"],
+                                        "_x": pos[0],
+                                        "_y": pos[1],
+                                        "_page_index": page_idx,
+                                    },
                                 }
                             ],
                             "image-control-action": 0,
