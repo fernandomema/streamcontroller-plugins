@@ -160,6 +160,8 @@ class SteamFriendsPlugin(PluginBase):
                 x = idx % max_cols
                 y = idx // max_cols
                 key = f"{x}x{y}"
+                # log app_id and name
+                self.logger.warning(f"Game {idx + 1}: appid={game['appid']}, name={game['name']}")
                 keys[key] = {
                     "states": {
                         "0": {

@@ -7,8 +7,10 @@ class GameLauncher(ActionBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not hasattr(self, "settings") or self.settings is None:
-            self.settings = {}
+        self.has_configuration = True
+
+    def on_ready(self):
+        self.settings = self.get_settings()
 
     def load_config_defaults(self):
         """Ensure settings have a valid appid/name when possible."""
@@ -18,10 +20,10 @@ class GameLauncher(ActionBase):
                 games = self.plugin_base.get_installed_games()
             except Exception:
                 games = []
-        if "appid" not in self.settings and games:
+        """     if "appid" not in self.settings and games:
             self.settings["appid"] = games[0].get("appid")
             self.settings["name"] = games[0].get("name")
-            self.set_settings(self.settings)
+            self.set_settings(self.settings) """
 
     def get_config_rows(self):
         """Create configuration rows to choose the game."""
