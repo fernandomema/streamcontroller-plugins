@@ -7,7 +7,8 @@ from src.backend.PluginManager.PluginBase import PluginBase
 from src.backend.PluginManager.ActionHolder import ActionHolder
 from src.backend.PluginManager.ActionInputSupport import ActionInputSupport
 from src.backend.DeckManagement.InputIdentifier import Input
-import requests 
+import requests
+import logging
 
 
 class SteamFriendsPlugin(PluginBase):
@@ -15,6 +16,7 @@ class SteamFriendsPlugin(PluginBase):
         import time
         super().__init__()
         self.lm = self.locale_manager
+        self.logger = logging.getLogger(__name__)
 
         # Cargar settings del plugin (persistentes)
         self.settings = self.get_settings() if hasattr(self, 'get_settings') else {}
@@ -77,6 +79,16 @@ class SteamFriendsPlugin(PluginBase):
         self.register_friends_page()
         # Registrar la página de juegos instalados
         self.register_games_page()
+
+    def _safe_get_json(self, url):
+        """Helper to GET and parse JSON without raising exceptions."""
+        try:
+            resp = requests.get(url, timeout=5)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            self.logger.warning(f"Failed to fetch {url}: {exc}")
+            return {}
 
     def set_settings(self, settings):
         """Guarda los settings y actualiza api_key y steam_id en memoria"""
@@ -168,16 +180,16 @@ class SteamFriendsPlugin(PluginBase):
         now = time.time()
         if self._avatar_url and (now - self._avatar_url_last_update < self._cache_ttl):
             return self._avatar_url
-        try:
-            url = f"https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={self.api_key}&steamids={self.steam_id}"
-            resp = requests.get(url)
-            players = resp.json().get('response', {}).get('players', [])
-            if players and 'avatarfull' in players[0]:
-                self._avatar_url = players[0]['avatarfull']
-                self._avatar_url_last_update = now
-                return self._avatar_url
-        except Exception:
-            pass
+        url = (
+            "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/"
+            f"?key={self.api_key}&steamids={self.steam_id}"
+        )
+        data = self._safe_get_json(url)
+        players = data.get('response', {}).get('players', [])
+        if players and 'avatarfull' in players[0]:
+            self._avatar_url = players[0]['avatarfull']
+            self._avatar_url_last_update = now
+            return self._avatar_url
         return self._avatar_url
 
     def get_steam_friends(self, api_key=None, steam_id=None):
@@ -194,9 +206,11 @@ class SteamFriendsPlugin(PluginBase):
         if steam_id in self._friends_cache and (now - self._friends_cache_last_update.get(steam_id, 0) < self._cache_ttl):
             return self._friends_cache[steam_id]
         # Get friend list
-        url = f"https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key={api_key}&steamid={steam_id}"
-        resp = requests.get(url)
-        data = resp.json()
+        url = (
+            "https://api.steampowered.com/ISteamUser/GetFriendList/v1/"
+            f"?key={api_key}&steamid={steam_id}"
+        )
+        data = self._safe_get_json(url)
         ids = [f['steamid'] for f in data.get('friendslist', {}).get('friends', [])]
         if not ids:
             self._friends_cache[steam_id] = []
@@ -204,9 +218,11 @@ class SteamFriendsPlugin(PluginBase):
             return []
         # Get player summaries
         ids_str = ",".join(ids)
-        url = f"https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={api_key}&steamids={ids_str}"
-        resp = requests.get(url)
-        players = resp.json().get('response', {}).get('players', [])
+        url = (
+            "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/"
+            f"?key={api_key}&steamids={ids_str}"
+        )
+        players = self._safe_get_json(url).get('response', {}).get('players', [])
         # Solo guarda los campos relevantes: steamid, personaname, avatarfull, personastate
         friends = [
             {
