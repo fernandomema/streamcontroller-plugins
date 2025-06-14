@@ -51,12 +51,11 @@ class GameLauncher(ActionBase):
         except Exception:
             games = []
         game = self._get_default_game(games)
-        if not game and games:
-            game = games[0]
-        if game:
-            self.settings["appid"] = game.get("appid")
-            self.settings["name"] = game.get("name")
-            self.set_settings(self.settings)
+        if not game:
+            return
+        self.settings["appid"] = game.get("appid")
+        self.settings["name"] = game.get("name")
+        self.set_settings(self.settings)
 
     def load_config_defaults(self):
         """Ensure settings have a valid appid/name when possible."""

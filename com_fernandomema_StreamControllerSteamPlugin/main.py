@@ -151,7 +151,7 @@ class SteamFriendsPlugin(PluginBase):
         pages_dir = os.path.join(self.PATH, "pages")
         os.makedirs(pages_dir, exist_ok=True)
 
-        positions = [(x, y) for x in range(1, 5) for y in range(3)]
+        positions = [(x, y) for y in range(3) for x in range(1, 5)]
         per_page = len(positions)
         total_pages = math.ceil(len(games) / per_page)
 
