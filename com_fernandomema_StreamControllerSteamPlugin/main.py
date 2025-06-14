@@ -10,6 +10,9 @@ from src.backend.DeckManagement.InputIdentifier import Input
 import requests
 import logging
 import math
+import os
+import json
+import re
 
 
 class SteamFriendsPlugin(PluginBase):
@@ -17,6 +20,7 @@ class SteamFriendsPlugin(PluginBase):
     def __init__(self):
         import time
         super().__init__()
+        self.init_vars()
         self.lm = self.locale_manager
         self.logger = logging.getLogger(__name__)
 
@@ -25,8 +29,10 @@ class SteamFriendsPlugin(PluginBase):
         # Valores por defecto
         self.settings.setdefault('api_key', "")
         self.settings.setdefault('steam_id', "")
+        self.settings.setdefault('sgdb_api_key', "")
         self.api_key = self.settings['api_key']
         self.steam_id = self.settings['steam_id']
+        self.sgdb_api_key = self.settings['sgdb_api_key']
 
         # Caches
         self._avatar_url = None
@@ -80,7 +86,7 @@ class SteamFriendsPlugin(PluginBase):
         # Registrar la página dinámica de amigos si existe
         self.register_friends_page()
         # Registrar la página de juegos instalados
-        self.register_games_page()
+        self.register_games_page()        
 
     def _safe_get_json(self, url):
         """Helper to GET and parse JSON without raising exceptions."""
@@ -96,8 +102,9 @@ class SteamFriendsPlugin(PluginBase):
         """Guarda los settings y actualiza api_key y steam_id en memoria"""
         super().set_settings(settings)
         self.settings = settings
-        self.api_key = self.settings.get('api_key', "E91DBC4C9CA96527F844933EEEB03EF1")
-        self.steam_id = self.settings.get('steam_id', "76561198074254458")
+        self.api_key = self.settings.get('api_key', "")
+        self.steam_id = self.settings.get('steam_id', "")
+        self.sgdb_api_key = self.settings.get('sgdb_api_key', "")
 
     def get_settings_area(self):
         """Devuelve la UI de configuración del plugin (API Key y SteamID)"""
@@ -109,6 +116,8 @@ class SteamFriendsPlugin(PluginBase):
         api_key_row.set_text(self.settings.get('api_key', ""))
         steam_id_row = EntryRow(title="SteamID64 principal")
         steam_id_row.set_text(self.settings.get('steam_id', ""))
+        sgdb_api_key_row = EntryRow(title="SteamGridDB API Key")
+        sgdb_api_key_row.set_text(self.settings.get('sgdb_api_key', ""))
 
         def on_api_key_changed(row, _param):
             self.set_setting('api_key', row.get_text())
@@ -116,11 +125,16 @@ class SteamFriendsPlugin(PluginBase):
         def on_steam_id_changed(row, _param):
             self.set_setting('steam_id', row.get_text())
 
+        def on_sgdb_api_key_changed(row, _param):
+            self.set_setting('sgdb_api_key', row.get_text())
+
         api_key_row.connect("notify::text", on_api_key_changed)
         steam_id_row.connect("notify::text", on_steam_id_changed)
+        sgdb_api_key_row.connect("notify::text", on_sgdb_api_key_changed)
 
         group.add(api_key_row)
         group.add(steam_id_row)
+        group.add(sgdb_api_key_row)
         return group
 
     def set_setting(self, key, value):
@@ -137,8 +151,19 @@ class SteamFriendsPlugin(PluginBase):
         
         self.register_page(page_path)
 
+    def init_vars(self):
+        """Inicializa variables y registra íconos para los botones Next y Previous."""
+        size = 0.7
+
+        # Registrar íconos predeterminados para los botones con registro adicional
+        next_icon_path = self.get_asset_path("next.png")
+        previous_icon_path = self.get_asset_path("previous.png")
+
+        self.add_icon("NEXT_BUTTON", next_icon_path, size)
+        self.add_icon("PREVIOUS_BUTTON", previous_icon_path, size)
+
     def register_games_page(self):
-        """Genera y registra p\u00e1ginas con los juegos instalados de Steam."""
+        """Genera y registra páginas con los juegos instalados de Steam."""
         import os
         import json
 
@@ -153,30 +178,95 @@ class SteamFriendsPlugin(PluginBase):
         pages_dir = os.path.join(self.PATH, "pages")
         os.makedirs(pages_dir, exist_ok=True)
 
+        # Usar directamente las rutas generadas por get_asset_path
+        next_icon = self.get_asset_path("next.png")
+        previous_icon = self.get_asset_path("previous.png")
+
+
+        # clone games to avoid modifying the original list
+        games_to_append = games.copy()
         for page_idx in range(total_pages):
             keys = {}
-            chunk = games[page_idx * per_page:(page_idx + 1) * per_page]
-            for idx, game in enumerate(chunk):
-                x = idx % max_cols
-                y = idx // max_cols
-                key = f"{x}x{y}"
-                # log app_id and name
-                self.logger.warning(f"Game {idx + 1}: appid={game['appid']}, name={game['name']}")
-                keys[key] = {
+
+            # Botón de página anterior
+            if page_idx > 0:
+                keys["0x1"] = {
                     "states": {
                         "0": {
                             "actions": [
                                 {
-                                    "id": f"{self.plugin_id}::GameLauncher",
-                                    "settings": {"appid": game["appid"], "name": game["name"]},
+                                    "id": "com_core447_DeckPlugin::ChangePage",
+                                    "settings": {
+                                        "selected_page": os.path.join(self.PATH, "pages", f"SteamGames{page_idx}.json"),
+                                        "deck_number": None
+                                    },
                                 }
                             ],
+                            "media": {
+                                "path": previous_icon
+                            },
                             "image-control-action": 0,
                             "label-control-actions": [0, 0, 0],
                             "background-control-action": 0,
                         }
                     }
                 }
+
+            # Botón de página siguiente
+            if page_idx < total_pages - 1:
+                next_page_path = os.path.join(self.PATH, "pages", f"SteamGames{page_idx + 2}.json")
+                keys["0x2"] = {  # Cambiar posición a 1x0
+                    "states": {
+                        "0": {
+                            "actions": [
+                                {
+                                    "id": "com_core447_DeckPlugin::ChangePage",
+                                    "settings": {
+                                        "selected_page": next_page_path,
+                                        "deck_number": None
+                                    },
+                                }
+                            ],
+                            "media": {
+                                "path": next_icon
+                            },
+                            "label-control-actions": [0, 0, 0],
+                            "background-control-action": 0,
+                        }
+                    }
+                }
+
+            
+            for x in range(max_cols):
+                for y in range(max_rows):
+                    if x == 0:
+                        continue
+
+                    # get first game in the chunk and remove it from the list
+                    if not games_to_append:
+                        self.logger.warning("No more games to append.")
+                        break
+                    game = games_to_append.pop(0)
+                    
+                    key = f"{x}x{y}"
+                    keys[key] = {
+                        "states": {
+                            "0": {
+                                "actions": [
+                                    {
+                                        "id": f"{self.plugin_id}::GameLauncher",
+                                        "settings": {"appid": game["appid"], "name": game["name"]},
+                                    }
+                                ],
+                                "media": {
+                                    "path": self.get_asset_path(f"{game['appid']}.jpg")
+                                },
+                                "image-control-action": 0,
+                                "label-control-actions": [0, 0, 0],
+                                "background-control-action": 0,
+                            }
+                        }
+                    }
 
             page_data = {"keys": keys}
             filename = (
@@ -261,40 +351,130 @@ class SteamFriendsPlugin(PluginBase):
         return self.friends_cache
 
     def get_installed_games(self):
-        """Devuelve una lista de juegos instalados usando los manifests de Steam."""
+        """Detecta juegos instalados por Steam y descarga sus iconos desde SteamGridDB (SGDB)."""
         import os
         import re
+        import json
+        import time
+        import requests
+        from pathlib import Path
 
-        libraries = []
-        vdf_path = os.path.expanduser("~/.steam/steam/steamapps/libraryfolders.vdf")
-        if os.path.exists(vdf_path):
+        SGDB_API_KEY = self.settings.get("sgdb_api_key", "")
+
+        # Carpeta para los iconos
+        assets_dir = Path(__file__).parent / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+
+        # Lista de posibles ubicaciones de steamapps
+        libraryfolders = [
+            Path.home() / ".steam/steam/steamapps",
+            Path.home() / ".local/share/Steam/steamapps"
+        ]
+
+        # Agregar rutas desde libraryfolders.vdf si existen
+        vdf_path = Path.home() / ".steam/steam/steamapps/libraryfolders.vdf"
+        if vdf_path.exists():
             try:
-                with open(vdf_path, "r") as f:
-                    text = f.read()
-                    libraries += re.findall(r'"path"\s*"([^"]+)"', text)
-            except Exception:
-                pass
+                with vdf_path.open("r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        match = re.search(r'"path"\s*"([^"]+)"', line)
+                        if match:
+                            clean_path = bytes(match.group(1), "utf-8").decode("unicode_escape")
+                            steamapps = Path(clean_path) / "steamapps"
+                            if steamapps.exists():
+                                libraryfolders.append(steamapps)
+            except Exception as e:
+                self.logger.warning(f"[SteamPlugin] Error leyendo libraryfolders.vdf: {e}")
 
-        libraries.append(os.path.expanduser("~/.steam/steam"))
+        self.logger.warning(f"[SteamPlugin] Bibliotecas encontradas: {libraryfolders}")
 
+        seen_appids = set()
         games = []
-        for lib in libraries:
-            manifests_path = os.path.join(lib, "steamapps")
-            if not os.path.isdir(manifests_path):
+
+        headers = {
+            "Authorization": f"Bearer {SGDB_API_KEY}",
+            "User-Agent": "SteamPlugin/1.0"
+        }
+
+        for steamapps_path in libraryfolders:
+            if not steamapps_path.exists():
                 continue
-            for fname in os.listdir(manifests_path):
+
+            for fname in os.listdir(steamapps_path):
                 if fname.startswith("appmanifest") and fname.endswith(".acf"):
-                    path = os.path.join(manifests_path, fname)
                     try:
-                        with open(path, "r") as f:
+                        path = steamapps_path / fname
+                        with open(path, "r", encoding="utf-8", errors="replace") as f:
                             data = f.read()
+
                         appid_match = re.search(r'"appid"\s*"(\d+)"', data)
                         name_match = re.search(r'"name"\s*"([^"]+)"', data)
+
                         if appid_match and name_match:
+                            appid = appid_match.group(1)
+                            name = name_match.group(1)
+
+                            if appid in seen_appids:
+                                continue
+                            seen_appids.add(appid)
+
+                            output_jpg = assets_dir / f"{appid}.jpg"
+
+                            if output_jpg.exists():
+                                self.logger.info(f"[SteamPlugin] Icono ya existe, se omite: {output_jpg}")
+                            else:
+                                try:
+                                    # 1. Buscar el juego por nombre
+                                    query = requests.utils.quote(name)
+                                    search_url = f"https://www.steamgriddb.com/api/v2/search/autocomplete/{query}"
+                                    res = requests.get(search_url, headers=headers)
+                                    if res.status_code == 403:
+                                        raise Exception("403 Forbidden (API Key inválida o límite)")
+                                    search_data = res.json().get("data", [])
+                                    if not search_data:
+                                        raise Exception(f"No encontrado en SGDB: {name}")
+
+                                    sgdb_id = search_data[0]["id"]
+
+                                    # 2. Obtener iconos
+                                    icons_url = f"https://www.steamgriddb.com/api/v2/icons/game/{sgdb_id}"
+                                    res = requests.get(icons_url, headers=headers)
+                                    icons_data = res.json().get("data", [])
+                                    if not icons_data:
+                                        raise Exception(f"No hay iconos en SGDB para {name}")
+
+                                    # 3. Descargar el primero
+                                    icon_data = icons_data[0]
+                                    icon_url = icon_data.get("thumb", icon_data["url"])  # preferimos thumb si existe
+
+                                    img_res = requests.get(icon_url, headers={
+                                        "User-Agent": "Mozilla/5.0",
+                                        "Referer": "https://www.steamgriddb.com/"
+                                    })
+
+                                    if img_res.status_code == 200 and "image" in img_res.headers.get("Content-Type", ""):
+                                        with open(output_jpg, "wb") as f:
+                                            f.write(img_res.content)
+                                        self.logger.info(f"[SteamPlugin] Icono SGDB descargado: {output_jpg}")
+                                    else:
+                                        self.logger.warning(f"[SteamPlugin] Error al descargar icono: {icon_url}")
+                                        raise Exception(f"Respuesta inválida al descargar imagen: status {img_res.status_code}, content-type {img_res.headers.get('Content-Type')}")
+
+
+                                    self.logger.info(f"[SteamPlugin] Icono SGDB descargado: {output_jpg}")
+                                    time.sleep(0.3)
+
+                                except Exception as e:
+                                    self.logger.warning(f"[SteamPlugin] SGDB error con {name} ({appid}): {e}")
+
                             games.append({
-                                "appid": appid_match.group(1),
-                                "name": name_match.group(1),
+                                "name": name,
+                                "appid": appid,
+                                "path": str(path)
                             })
-                    except Exception:
-                        continue
+
+                    except Exception as e:
+                        self.logger.warning(f"[SteamPlugin] Error leyendo {fname}: {e}")
+
         return games
