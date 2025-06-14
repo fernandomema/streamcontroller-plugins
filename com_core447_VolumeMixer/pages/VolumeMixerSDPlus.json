@@ -1,0 +1,164 @@
+{
+    "keys": {
+        "0x0": {
+            "states": {
+                "0": {
+                    "actions": [
+                        {
+                            "id": "com_core447_VolumeMixer::Exit",
+                            "settings": {}
+                        }
+                    ],
+                    "image-control-action": 0,
+                    "label-control-actions": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        },
+        "1x0": {
+            "states": {
+                "0": {
+                    "actions": [
+                        {
+                            "id": "com_core447_VolumeMixer::MoveLeft",
+                            "settings": {}
+                        }
+                    ],
+                    "image-control-action": 0,
+                    "label-control-actions": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        },
+        "2x0": {
+            "states": {
+                "0": {
+                    "actions": [
+                        {
+                            "id": "com_core447_VolumeMixer::MoveRight",
+                            "settings": {}
+                        }
+                    ],
+                    "image-control-action": 0,
+                    "label-control-actions": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        }
+    },
+    "dials": {
+        "0": {
+            "states": {
+                "0": {
+                    "actions": [
+                        {
+                            "id": "com_core447_VolumeMixer::Dial",
+                            "settings": {}
+                        }
+                    ],
+                    "image-control-action": 0,
+                    "label-control-actions": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        },
+        "1": {
+            "states": {
+                "0": {
+                    "actions": [
+                        {
+                            "id": "com_core447_VolumeMixer::Dial",
+                            "settings": {}
+                        }
+                    ],
+                    "image-control-action": 0,
+                    "label-control-actions": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        },
+        "2": {
+            "states": {
+                "0": {
+                    "actions": [
+                        {
+                            "id": "com_core447_VolumeMixer::Dial",
+                            "settings": {}
+                        }
+                    ],
+                    "image-control-action": 0,
+                    "label-control-actions": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        },
+        "3": {
+            "states": {
+                "0": {
+                    "actions": [
+                        {
+                            "id": "com_core447_VolumeMixer::Dial",
+                            "settings": {}
+                        }
+                    ],
+                    "image-control-action": 0,
+                    "label-control-actions": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        }
+    },
+    "touchscreens": {
+        "sd-plus": {
+            "states": {
+                "0": {
+                    "actions": [
+                        {
+                            "id": "com_core447_VolumeMixer::MoveLeft",
+                            "settings": {},
+                            "event-assignments": {
+                                "Touchscreen Drag Left": "Key Down",
+                                "Touchscreen Drag Right": "None"
+                            }
+                        },
+                        {
+                            "id": "com_core447_VolumeMixer::MoveRight",
+                            "settings": {},
+                            "event-assignments": {
+                                "Touchscreen Drag Left": "None",
+                                "Touchscreen Drag Right": "Key Down"
+                            }
+                        }
+                    ],
+                    "image-control-action": 0,
+                    "label-control-actions": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        }
+    }
+}
