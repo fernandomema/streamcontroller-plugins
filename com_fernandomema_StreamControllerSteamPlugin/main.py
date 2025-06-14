@@ -239,7 +239,9 @@ class SteamFriendsPlugin(PluginBase):
 
     def refresh_friends_cache(self):
         """Refresca manualmente la caché de amigos"""
-        self._friends_cache_last_update = 0
+        # Reiniciar las estructuras de caché para evitar errores al refrescar
+        self._friends_cache = {}
+        self._friends_cache_last_update = {}
         self.friends_cache = self.get_steam_friends()
         print("[SteamFriends] Caché de amigos refrescada manualmente.")
         return self.friends_cache
