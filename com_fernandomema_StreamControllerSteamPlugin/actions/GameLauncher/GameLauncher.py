@@ -87,6 +87,6 @@ class GameLauncher(ActionBase):
         """Display the game name on the key label."""
         name = self.settings.get("name") if hasattr(self, "settings") else None
         if name:
-            self.set_label(text=name, position="center")
+            self.set_label(text=name, position="bottom")
         else:
-            self.set_label(text="Steam Game", position="center")
+            self.set_label(text="Steam Game", position="bottom")
