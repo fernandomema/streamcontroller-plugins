@@ -1,4 +1,5 @@
 from .actions.FriendSlot.FriendSlot import FriendSlot
+from .actions.GameLauncher.GameLauncher import GameLauncher
 
 # StreamController Steam Friends Plugin
 
@@ -51,6 +52,20 @@ class SteamFriendsPlugin(PluginBase):
         self.friend_slot_holder.has_configuration = True  # Permite configurar steamid
         self.add_action_holder(self.friend_slot_holder)
 
+        # ActionHolder para lanzar juegos de Steam
+        self.game_launcher_holder = ActionHolder(
+            plugin_base=self,
+            action_base=GameLauncher,
+            action_id_suffix="GameLauncher",
+            action_name="Steam Game Launcher",
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.UNSUPPORTED,
+                Input.Touchscreen: ActionInputSupport.SUPPORTED
+            }
+        )
+        self.add_action_holder(self.game_launcher_holder)
+
         # Register plugin
         self.register(
             plugin_name = self.lm.get("plugin.name"),
@@ -60,6 +75,8 @@ class SteamFriendsPlugin(PluginBase):
         )
         # Registrar la página dinámica de amigos si existe
         self.register_friends_page()
+        # Registrar la página de juegos instalados
+        self.register_games_page()
 
     def set_settings(self, settings):
         """Guarda los settings y actualiza api_key y steam_id en memoria"""
@@ -104,6 +121,45 @@ class SteamFriendsPlugin(PluginBase):
         # Verificar si ya existe la página estática
         page_path = os.path.join(self.PATH, "pages", "SteamFriends.json")
         
+        self.register_page(page_path)
+
+    def register_games_page(self):
+        """Genera y registra una página con los juegos instalados de Steam."""
+        import os
+        import json
+
+        games = self.get_installed_games()
+        if not games:
+            return
+
+        keys = {}
+        max_cols, max_rows = 5, 3
+        for idx, game in enumerate(games[: max_cols * max_rows]):
+            x = idx % max_cols
+            y = idx // max_cols
+            key = f"{x}x{y}"
+            keys[key] = {
+                "states": {
+                    "0": {
+                        "actions": [
+                            {
+                                "id": f"{self.ID}::GameLauncher",
+                                "settings": {"appid": game["appid"], "name": game["name"]},
+                            }
+                        ],
+                        "image-control-action": 0,
+                        "label-control-actions": [0, 0, 0],
+                        "background-control-action": 0,
+                    }
+                }
+            }
+
+        page_data = {"keys": keys}
+        page_path = os.path.join(self.PATH, "pages", "SteamGames.json")
+        os.makedirs(os.path.dirname(page_path), exist_ok=True)
+        with open(page_path, "w") as f:
+            json.dump(page_data, f, indent=4)
+
         self.register_page(page_path)
 
     def get_main_avatar_url(self):
@@ -171,3 +227,42 @@ class SteamFriendsPlugin(PluginBase):
         self.friends_cache = self.get_steam_friends()
         print("[SteamFriends] Caché de amigos refrescada manualmente.")
         return self.friends_cache
+
+    def get_installed_games(self):
+        """Devuelve una lista de juegos instalados usando los manifests de Steam."""
+        import os
+        import re
+
+        libraries = []
+        vdf_path = os.path.expanduser("~/.steam/steam/steamapps/libraryfolders.vdf")
+        if os.path.exists(vdf_path):
+            try:
+                with open(vdf_path, "r") as f:
+                    text = f.read()
+                    libraries += re.findall(r'"path"\s*"([^"]+)"', text)
+            except Exception:
+                pass
+
+        libraries.append(os.path.expanduser("~/.steam/steam"))
+
+        games = []
+        for lib in libraries:
+            manifests_path = os.path.join(lib, "steamapps")
+            if not os.path.isdir(manifests_path):
+                continue
+            for fname in os.listdir(manifests_path):
+                if fname.startswith("appmanifest") and fname.endswith(".acf"):
+                    path = os.path.join(manifests_path, fname)
+                    try:
+                        with open(path, "r") as f:
+                            data = f.read()
+                        appid_match = re.search(r'"appid"\s*"(\d+)"', data)
+                        name_match = re.search(r'"name"\s*"([^"]+)"', data)
+                        if appid_match and name_match:
+                            games.append({
+                                "appid": appid_match.group(1),
+                                "name": name_match.group(1),
+                            })
+                    except Exception:
+                        continue
+        return games
