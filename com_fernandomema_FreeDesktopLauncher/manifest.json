@@ -1,0 +1,17 @@
+{
+    "version": "1.0.0",
+    "thumbnail": "store/Thumbnail.png",
+    "id": "com_fernandomema_FreeDesktopLauncher",
+    "name": "FreeDesktop Launcher",
+    "descriptions": {
+        "en_US": "Generate pages with application menu entries and launch them"
+    },
+    "short-descriptions": {
+        "en_US": "Launch applications from the desktop menu"
+    },
+    "tags": ["Menu", "Launcher"],
+    "minimum-app-version": "1.0.0",
+    "app-version": "1.4.11-beta",
+    "description": "Generate pages with application menu entries and launch them.",
+    "short-description": "Launch applications from the desktop menu."
+}
