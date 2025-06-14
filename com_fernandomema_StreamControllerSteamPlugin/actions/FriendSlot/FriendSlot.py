@@ -5,6 +5,35 @@ from io import BytesIO
 
 class FriendSlot(ActionBase):
 
+    def _slot_coords(self):
+        """Intentar obtener las coordenadas x, y y el indice de pagina."""
+        x = getattr(self, "x", None)
+        y = getattr(self, "y", None)
+        page = getattr(self, "page", getattr(self, "page_index", 0))
+        # Algunos entornos exponen el id de la tecla como "1x0"
+        if (x is None or y is None) and hasattr(self, "key"):
+            try:
+                parts = str(getattr(self, "key")).split("x")
+                if len(parts) == 2:
+                    x = int(parts[0])
+                    y = int(parts[1])
+            except Exception:
+                pass
+        return x, y, page
+
+    def _get_default_friend(self, friends):
+        """Devuelve el amigo correspondiente a esta posicion si es posible."""
+        x, y, page = self._slot_coords()
+        if x is None or y is None:
+            return None
+        if x == 0:
+            return None
+        cols = 4
+        index = (page * cols * 3) + ((y * cols) + (x - 1))
+        if 0 <= index < len(friends):
+            return friends[index]
+        return None
+
     def on_changed(self, row, _param, steamid_list):
         """Maneja el cambio de selección en el ComboRow"""
         idx = row.get_selected()
@@ -120,16 +149,22 @@ class FriendSlot(ActionBase):
         print("[FriendSlot] steamid configurado:", steamid)
 
         if not friend:
-            self.set_media(image=None)
-            # Si steamid es None, mostrar un mensaje genérico
             if steamid is None:
-                self.set_label(text="Selecciona un amigo", position="center")
+                # Calcular automáticamente qué amigo corresponde a esta posición
+                friend = self._get_default_friend(friends)
+                if friend:
+                    steamid = friend.get("steamid")
+                else:
+                    self.set_media(image=None)
+                    self.set_label(text="Selecciona un amigo", position="center")
+                    print("[FriendSlot] steamid no asignado y sin amigo por defecto")
+                    return
             else:
+                self.set_media(image=None)
                 self.set_label(text=f"(Sin amigo: {steamid})", position="center")
-            # Mostrar todos los steamid disponibles en el log para debug
-            print("[FriendSlot] steamid no encontrado:", steamid)
-            print("[FriendSlot] steamids disponibles:", [f.get('steamid') for f in friends])
-            return
+                print("[FriendSlot] steamid no encontrado:", steamid)
+                print("[FriendSlot] steamids disponibles:", [f.get('steamid') for f in friends])
+                return
 
         avatar_url = friend.get('avatar')
         if avatar_url:
