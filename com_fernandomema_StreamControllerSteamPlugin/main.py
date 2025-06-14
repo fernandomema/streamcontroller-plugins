@@ -136,43 +136,55 @@ class SteamFriendsPlugin(PluginBase):
         self.register_page(page_path)
 
     def register_games_page(self):
-        """Genera y registra una página con los juegos instalados de Steam."""
+        """Generate and register pages with installed Steam games."""
+        self.generate_games_pages()
+
+    def generate_games_pages(self):
         import os
         import json
+        import math
 
         games = self.get_installed_games()
         if not games:
             return
 
-        keys = {}
-        max_cols, max_rows = 5, 3
-        for idx, game in enumerate(games[: max_cols * max_rows]):
-            x = idx % max_cols
-            y = idx // max_cols
-            key = f"{x}x{y}"
-            keys[key] = {
-                "states": {
-                    "0": {
-                        "actions": [
-                            {
-                                "id": f"{self.plugin_id}::GameLauncher",
-                                "settings": {"appid": game["appid"], "name": game["name"]},
-                            }
-                        ],
-                        "image-control-action": 0,
-                        "label-control-actions": [0, 0, 0],
-                        "background-control-action": 0,
+        pages_dir = os.path.join(self.PATH, "pages")
+        os.makedirs(pages_dir, exist_ok=True)
+
+        positions = [(x, y) for x in range(1, 5) for y in range(3)]
+        per_page = len(positions)
+        total_pages = math.ceil(len(games) / per_page)
+
+        for page_idx in range(total_pages):
+            chunk = games[page_idx * per_page : (page_idx + 1) * per_page]
+            keys = {"0x0": {}}
+            for game, pos in zip(chunk, positions):
+                key = f"{pos[0]}x{pos[1]}"
+                keys[key] = {
+                    "states": {
+                        "0": {
+                            "actions": [
+                                {
+                                    "id": f"{self.plugin_id}::GameLauncher",
+                                    "settings": {"appid": game["appid"], "name": game["name"]},
+                                }
+                            ],
+                            "image-control-action": 0,
+                            "label-control-actions": [0, 0, 0],
+                            "background-control-action": 0,
+                        }
                     }
                 }
-            }
 
-        page_data = {"keys": keys}
-        page_path = os.path.join(self.PATH, "pages", "SteamGames.json")
-        os.makedirs(os.path.dirname(page_path), exist_ok=True)
-        with open(page_path, "w") as f:
-            json.dump(page_data, f, indent=4)
+            for pos in positions[len(chunk):]:
+                key = f"{pos[0]}x{pos[1]}"
+                keys.setdefault(key, {})
 
-        self.register_page(page_path)
+            page_data = {"keys": keys}
+            page_path = os.path.join(pages_dir, f"SteamGamesPage{page_idx + 1}.json")
+            with open(page_path, "w") as f:
+                json.dump(page_data, f, indent=4)
+            self.register_page(page_path)
 
     def get_main_avatar_url(self):
         # Obtiene el avatar del usuario principal, usando caché
