@@ -19,6 +19,10 @@ class GameLauncher(ActionBase):
         y = getattr(self, "y", None)
         page = getattr(self, "page", getattr(self, "page_index", None))
 
+        # If a Page object is provided, try to extract its index
+        if page is not None and not isinstance(page, int):
+            page = getattr(page, "page_index", getattr(page, "index", 0))
+
         ident = getattr(self, "input_ident", None)
         if (x is None or y is None) and ident is not None:
             coords = getattr(ident, "coords", None)
