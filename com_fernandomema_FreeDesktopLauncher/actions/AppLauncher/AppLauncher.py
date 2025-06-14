@@ -5,14 +5,21 @@ from gi.repository import Gtk, Gdk
 import os
 
 class AppLauncher(ActionBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not hasattr(self, "settings") or self.settings is None:
+            self.settings = {}
+
     def on_short_press(self):
-        cmd = self.settings.get("exec")
+        settings = self.settings if hasattr(self, "settings") and self.settings else {}
+        cmd = settings.get("exec")
         if cmd:
             subprocess.Popen(cmd, shell=True)
 
     def on_tick(self):
-        name = self.settings.get("name", "")
-        icon_name = self.settings.get("icon")
+        settings = self.settings if hasattr(self, "settings") and self.settings else {}
+        name = settings.get("name", "")
+        icon_name = settings.get("icon")
         image = None
         if icon_name:
             path = self.resolve_icon(icon_name)
